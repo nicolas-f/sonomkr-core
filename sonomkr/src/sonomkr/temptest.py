@@ -34,23 +34,23 @@ def test_sinus():
     f = FilterDesign()
     f.sample_rate = 48000
     configuration = f.generate_configuration()
-    import json
-    print(json.dumps(configuration, sort_keys=True, indent=4))
+    #import json
+    #print(json.dumps(configuration, sort_keys=True, indent=4))
     # generate signal
-    samples = generate_signal(f.sample_rate, duration=10,
+    samples = generate_signal(f.sample_rate, duration=1,
                               signal_frequency=1000)
 
     # pick 500Hz filter
-    iir_filters = []
-    for idfreq, freq in configuration["bandpass"].items():
-        ref_filter_config = freq["filters"]
-        iir_filters.append(ref_filter_config)
+    iir_filters = BiquadFilter([bandpass_config["filters"] for bandpass_config
+                                in configuration["bandpass"].values()],
+                               len(samples))
 
     deb = time.time()
-    with Pool(8) as p:
-        print(list(map(process,
-                    [[iir_filter, samples] for iir_filter in iir_filters])))
+    for i in range(500):
+        filtered = iir_filters.filter(samples)
     print("Done in %.3f" % (time.time() - deb))
+
+    #parallel_filter.parallel_diagnostics(level=4)
 
 
 test_sinus()

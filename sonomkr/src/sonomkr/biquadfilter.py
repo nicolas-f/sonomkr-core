@@ -1,7 +1,6 @@
 import numpy
-from numba.experimental import jitclass
 from numba import float64    # import the types
-from numba import njit
+from numba import njit, prange, jit
 
 """ A digital biquad filter is a second order recursive linear filter,
  containing two poles and two zeros. "Biquad" is an abbreviation of "bi-quadratic",
@@ -42,54 +41,51 @@ __authors__ = ["Valentin Le Bescond, Université Gustave Eiffel",
               "Nicolas Fortin, Université Gustave Eiffel"]
 __license__ = "BSD3"
 
-spec = [
-    ('_delay_1', float64[:]),
-    ('_delay_2', float64[:]),
-    ('b0', float64[:]),
-    ('b1', float64[:]),
-    ('b2', float64[:]),
-    ('a1', float64[:]),
-    ('a2', float64[:])
-]
 
-
-@jitclass(spec)
-class BiquadFilter:
-    def __init__(self, b0, b1, b2, a1, a2):
-        assert len(b0) == len(b1) == len(b2) == len(a1) == len(a2)
-        self._delay_1 = numpy.zeros(shape=len(b0), dtype=float)
-        self._delay_2 = numpy.zeros(shape=len(b0), dtype=float)
-        self.b0 = b0
-        self.b1 = b1
-        self.b2 = b2
-        self.a1 = a1
-        self.a2 = a2
-        assert len(b0) == len(b1) == len(b2) == len(a1) == len(a2)
-
-    def reset(self):
-        """
-        Reset delays of this filter
-        """
-        self._delay_1 = numpy.zeros(shape=len(self.b0), dtype=float)
-        self._delay_2 = numpy.zeros(shape=len(self.b0), dtype=float)
-
-    def filter(self, samples: float64[:]):
-        samples_len = len(samples)
-        filter_length = len(self.b0)
+@njit(parallel=False)
+def filter(delay_1: float64[:], delay_2: float64[:], b0: float64[:],
+           b1: float64[:], b2: float64[:], a1: float64[:], a2: float64[:],
+           samples: float64[:], samples_out: float64[:]):
+    bquad_filter_length = len(b0)
+    samples_len = len(samples_out[0])
+    for h in prange(bquad_filter_length):
+        filter_length = len(b0[h])
         for i in range(samples_len):
             input_acc = samples[i]
             for j in range(filter_length):
-                input_acc -= self._delay_1[j] * self.a1[j]
-                input_acc -= self._delay_2[j] * self.a2[j]
-                output_acc = input_acc * self.b0[j]
-                output_acc += self._delay_1[j] * self.b1[j]
-                output_acc += self._delay_2[j] * self.b2[j]
+                input_acc -= delay_1[h][j] * a1[h][j]
+                input_acc -= delay_2[h][j] * a2[h][j]
+                output_acc = input_acc * b0[h][j]
+                output_acc += delay_1[h][j] * b1[h][j]
+                output_acc += delay_2[h][j] * b2[h][j]
 
-                self._delay_2[j] = self._delay_1[j]
-                self._delay_1[j] = input_acc
+                delay_2[h][j] = delay_1[h][j]
+                delay_1[h][j] = input_acc
 
                 input_acc = output_acc
-            samples[i] = input_acc
+            samples_out[h][i] = input_acc
 
+class BiquadFilter:
+    def __init__(self, filters: list, samples_len):
+        self.delay_1 = numpy.zeros((len(filters), len(filters[0]["b0"])))
+        self.delay_2 = numpy.zeros((len(filters), len(filters[0]["b0"])))
+        self.b0 = numpy.array([numpy.array(bq_filter["b0"]) for bq_filter in
+                               filters])
+        self.b1 = numpy.array([numpy.array(bq_filter["b1"]) for bq_filter in
+                               filters])
+        self.b2 = numpy.array([numpy.array(bq_filter["b2"]) for bq_filter in
+                               filters])
+        self.a1 = numpy.array([numpy.array(bq_filter["a1"]) for bq_filter in
+                               filters])
+        self.a2 = numpy.array([numpy.array(bq_filter["a2"]) for bq_filter in
+                               filters])
+        self.samples_out = numpy.zeros(shape=(len(filters), samples_len))
+
+    def filter(self, samples):
+        assert len(samples) == len(self.samples_out[0])
+        filter(self.delay_1, self.delay_2, self.b0, self.b1,
+                               self.b2, self.a1, self.a2, samples,
+                               self.samples_out)
+        return self.samples_out
 
 
