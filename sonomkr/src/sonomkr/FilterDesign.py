@@ -36,21 +36,7 @@ class FilterDesign:
                 "min_frequency": fmin
             }
 
-        # Compute the standard CLASS 0 filters requirements
-        g_spec = [0, 1, 2, 3, 4, 4, 8, 16, 24, 32]
-        x_normalized = [None] * 19
-        for i in range(0, 10):
-
-            q = self.down_sampling ** (g_spec[i] / 8.0)
-            qh = 1.0 + ((self.down_sampling ** (1 / (2.0 * self.band_division)) - 1.0) /
-                        (self.down_sampling ** (1 / 2.0) - 1.0)) * (q - 1.0)
-            ql = 1 / qh
-
-            x_normalized[i + 9] = qh
-            x_normalized[9 - i] = ql
-
         # Compute bandpass filters
-        filters = {}
         nyquist = self.sample_rate / 2.0
         for x in frequencies.keys():
             w = [frequencies[x]["min_frequency"] / nyquist, frequencies[x]["max_frequency"] / nyquist]
