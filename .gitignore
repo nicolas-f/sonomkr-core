@@ -43,3 +43,10 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 sonomkr-core
+.tox
+venv
+dist/
+*.egg-info
+__pycache__
+_trial_temp
+.idea

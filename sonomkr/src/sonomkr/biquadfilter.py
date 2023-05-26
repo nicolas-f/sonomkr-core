@@ -1,6 +1,7 @@
 import numpy
 from numba.experimental import jitclass
 from numba import float64    # import the types
+from numba import njit
 
 """ A digital biquad filter is a second order recursive linear filter,
  containing two poles and two zeros. "Biquad" is an abbreviation of "bi-quadratic",
@@ -54,7 +55,7 @@ spec = [
 
 @jitclass(spec)
 class BiquadFilter:
-    def __init__(self, b0: list, b1: list, b2: list, a1: list, a2: list):
+    def __init__(self, b0, b1, b2, a1, a2):
         assert len(b0) == len(b1) == len(b2) == len(a1) == len(a2)
         self._delay_1 = numpy.zeros(shape=len(b0), dtype=float)
         self._delay_2 = numpy.zeros(shape=len(b0), dtype=float)
@@ -73,9 +74,11 @@ class BiquadFilter:
         self._delay_2 = numpy.zeros(shape=len(self.b0), dtype=float)
 
     def filter(self, samples: float64[:]):
-        for i in range(len(samples)):
+        samples_len = len(samples)
+        filter_length = len(self.b0)
+        for i in range(samples_len):
             input_acc = samples[i]
-            for j in range(len(self.b0)):
+            for j in range(filter_length):
                 input_acc -= self._delay_1[j] * self.a1[j]
                 input_acc -= self._delay_2[j] * self.a2[j]
                 output_acc = input_acc * self.b0[j]
@@ -83,7 +86,7 @@ class BiquadFilter:
                 output_acc += self._delay_2[j] * self.b2[j]
 
                 self._delay_2[j] = self._delay_1[j]
-                self._delay_1[j] = self.input_acc[j]
+                self._delay_1[j] = input_acc
 
                 input_acc = output_acc
             samples[i] = input_acc

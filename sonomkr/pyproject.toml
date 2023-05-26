@@ -38,15 +38,14 @@ keywords = ["sample", "setuptools", "development"]  # Optional
 # authored the project, and a valid email address corresponding to the name
 # listed.
 authors = [
-  {name = "A. Random Developer", email = "author@example.com" } # Optional
+  {name = "Nicolas FORTIN"},
+  {name = "Valentin LE BESCOND"}
 ]
 
 # This should be your name or the names of the organization who currently
 # maintains the project, and a valid email address corresponding to the name
 # listed.
-maintainers = [
-  {name = "A. Great Maintainer", email = "maintainer@example.com" } # Optional
-]
+maintainers = [ ]
 
 # Classifiers help users find your project by categorizing it.
 #
@@ -63,7 +62,7 @@ classifiers = [  # Optional
   "Topic :: Software Development :: Build Tools",
 
   # Pick your license as you wish
-  "License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: BSD License",
 
   # Specify the Python versions you support here. In particular, ensure
   # that you indicate you support Python 3. These classifiers are *not*
@@ -83,9 +82,7 @@ classifiers = [  # Optional
 #
 # For an analysis of this field vs pip's requirements files see:
 # https://packaging.python.org/discussions/install-requires-vs-requirements/
-dependencies = [ # Optional
-  "peppercorn"
-]
+dependencies = [ "numba", "scipy"]
 
 # List additional groups of dependencies here (e.g. development
 # dependencies). Users will be able to install these using the "extras"
@@ -115,11 +112,6 @@ test = ["coverage"]
 "Funding" = "https://donate.pypi.org"
 "Say Thanks!" = "http://saythanks.io/to/example"
 "Source" = "https://github.com/pypa/sampleproject/"
-
-# The following would provide a command line executable called `sample`
-# which executes the function `main` from this package when invoked.
-[project.scripts]  # Optional
-sample = "sample:main"
 
 # This is configuration specific to the `setuptools` build backend.
 # If you are using a different build backend, you will need to change this.
