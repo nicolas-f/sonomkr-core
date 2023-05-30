@@ -9,7 +9,6 @@ import time
 import numba
 from multiprocessing import Pool
 from scipy import signal
-from acoustics.standards import iec_61672_1_2013
 
 
 def generate_signal(sample_rate, duration, signal_frequency):
@@ -70,13 +69,16 @@ def test_sinus():
     stride = int(1/3 * f.sample_rate)
     stride = round(stride / sc.minimum_samples_length)\
              * sc.minimum_samples_length
+    spectrums = []
     for sample_index in range(0, len(samples), stride):
         sub_samples = samples[sample_index:sample_index+stride]
         spectrum_dictionary = sc.process_samples(sub_samples)
         spectrum = [spectrum_dictionary[str(frequency_name)] for
                     frequency_name in
                     sorted(map(int, spectrum_dictionary.keys()))]
-        print("%.3f s" % ((sample_index + stride) / f.sample_rate), spectrum)
+        spectrums.append(("%.3f s" % ((sample_index + stride) / f.sample_rate), spectrum))
+    for t, spectrum in spectrums:
+        print(t, spectrum)
     print("numba Done in %.3f" % (time.time() - deb))
 
 
