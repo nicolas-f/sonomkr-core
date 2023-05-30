@@ -1,38 +1,70 @@
-import json
+from biquadfilter import BiquadFilter
+import numpy
+import math
 
-G10 = 10.0 ** (3.0/10.0)
-G2 = 2.0
-BOCT = 1.0
-BTHIRD = 3.0
-R48 = 48000
-R44P1 = 44100
 
-# strategy : base 2 or base 10
-G = G10
-# Nth octave band : 1 or 3
-B = BTHIRD
-# Sampling rate
-R = R44P1
-NQST = R / 2.0
-# Filters order
-ORDER = 6
+def compute_leq(samples):
+    samples = samples.astype(float)
+    return 20 * math.log10(math.sqrt((samples * samples).sum() / len(samples)))
 
-f1000 = 1000.0
-frequencies = {}
+class SpectrumChannel:
+    def __init__(self, configuration):
+        # init sub_samplers with anti aliasing filters parameters
+        # Sub samplers goal is only to reduce the sample rate for band pass
+        # filter that accept lower frequency rates in order to reduce the
+        # computation time.
+        self.configuration = configuration
+        bp = configuration["bandpass"]
+        max_subsampling = max([v["subsampling_depth"] for k, v in
+                               bp.items()])
+        self.subsampling_ratio = configuration["anti_aliasing"]["sample_ratio"]
+        self.minimum_samples_length = self.subsampling_ratio ** max_subsampling
+        ref_filter_config = configuration["anti_aliasing"]
+        self.sub_samplers = [
+            BiquadFilter(numpy.array(ref_filter_config["b0"]),
+                         numpy.array(ref_filter_config["b1"]),
+                         numpy.array(ref_filter_config["b2"]),
+                         numpy.array(ref_filter_config["a1"]),
+                         numpy.array(ref_filter_config["a2"]))
+            for i in range(max_subsampling)]
 
-min_band_center_freq = 0
+        self.iir_filters = [list() for i in range(max_subsampling + 1)]
+        for idfreq, freq in bp.items():
+            ref_filter_config = bp[freq["subsampling_filter_index"]]["filters"]
+            iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
+                                      numpy.array(ref_filter_config["b1"]),
+                                      numpy.array(ref_filter_config["b2"]),
+                                      numpy.array(ref_filter_config["a1"]),
+                                      numpy.array(ref_filter_config["a2"]))
+            self.iir_filters[freq["subsampling_depth"]]\
+                .append((idfreq, iir_filter))
 
-max_band_number = 13 if B == BTHIRD else 3
-min_band_number = -31 if B == BTHIRD else -10
-band_numbers = range(min_band_number, max_band_number+1)
+    def process_samples(self, samples):
+        """
+        Compute the leq for provided samples
+        :param samples:
+        :return:
+        """
+        if len(samples) % self.minimum_samples_length != 0:
+            raise ValueError("Provided samples len should be a factor of "
+                             "%d samples" % self.minimum_samples_length)
 
-for x in band_numbers:
-    fmid = (G ** (x / B)) * f1000
-    fmax = (G ** (1 / (2 * B))) * fmid
-    fmin = (G ** (- 1 / (2 * B))) * fmid
-    frequencies[x] = {
-        "center": fmid,
-        "max": fmax,
-        "min": fmin
-    }
-print(json.dumps(frequencies, sort_keys=True, indent=4))
+        last_filter_samples = samples
+        leqs = {}
+        for cascade_index, cascade_element in enumerate(self.iir_filters):
+            # Use last filter samples into each IIRFilter
+            for frequency_id, iir_filter in cascade_element:
+                out_samples = last_filter_samples.copy()
+                iir_filter.filter(out_samples)
+                leqs[frequency_id] = compute_leq(out_samples)
+            # sub sampling for next filters (lower frequency)
+            if cascade_index < len(self.sub_samplers):
+                next_filter_samples = numpy.zeros(
+                    int(len(last_filter_samples) / self.subsampling_ratio))
+                antialiasing = self.sub_samplers[cascade_index]
+                antialiasing.filter_slice(last_filter_samples,
+                                          next_filter_samples,
+                                          self.subsampling_ratio)
+                last_filter_samples = next_filter_samples
+        return leqs
+

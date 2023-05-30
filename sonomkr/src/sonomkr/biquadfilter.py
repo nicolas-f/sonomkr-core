@@ -1,6 +1,6 @@
 import numpy
 from numba.experimental import jitclass
-from numba import float64    # import the types
+from numba import float64     # import the types
 from numba import njit
 
 """ A digital biquad filter is a second order recursive linear filter,
@@ -91,5 +91,26 @@ class BiquadFilter:
                 input_acc = output_acc
             samples[i] = input_acc
 
+    def filter_slice(self, samples_in: float64[:], samples_out: float64[:],
+                     subsampling_factor: int):
+        samples_len = len(samples_in)
+        filter_length = len(self.b0)
+        samples_out_index = 0
+        for i in range(samples_len):
+            input_acc = samples_in[i]
+            for j in range(filter_length):
+                input_acc -= self._delay_1[j] * self.a1[j]
+                input_acc -= self._delay_2[j] * self.a2[j]
+                output_acc = input_acc * self.b0[j]
+                output_acc += self._delay_1[j] * self.b1[j]
+                output_acc += self._delay_2[j] * self.b2[j]
+
+                self._delay_2[j] = self._delay_1[j]
+                self._delay_1[j] = input_acc
+
+                input_acc = output_acc
+            if i % subsampling_factor == 0:
+                samples_out[samples_out_index] = input_acc
+                samples_out_index += 1
 
 

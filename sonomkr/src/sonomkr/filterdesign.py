@@ -69,10 +69,21 @@ class FilterDesign:
                              (1 / (2 * self.band_division))) * frequency_mid
             frequency_min = (self.down_sampling **
                              (- 1 / (2 * self.band_division))) * frequency_mid
+            subsampling_depth = 0
+            down_sampling_frequency_div = 10 if self.down_sampling == self.G10\
+                else 2
+            while self.sample_rate % \
+                    down_sampling_frequency_div ** (subsampling_depth+1) == 0\
+                    and self.sample_rate / down_sampling_frequency_div **\
+                    (subsampling_depth+1) >= frequency_mid * 2:
+                subsampling_depth += 1
             frequencies[str(x)] = {
                 "center_frequency": frequency_mid,
                 "max_frequency": frequency_max,
-                "min_frequency": frequency_min
+                "min_frequency": frequency_min,
+                "subsampling_depth": subsampling_depth,
+                "subsampling_filter_index":
+                    str(x + subsampling_depth * (10 if self.down_sampling == self.G10 else 3))
             }
 
         # Compute bandpass filters
@@ -101,6 +112,7 @@ class FilterDesign:
                          "b2": [sos[2] for sos in aliasing_sos],
                          "a1": [sos[4] for sos in aliasing_sos],
                          "a2": [sos[5] for sos in aliasing_sos]}
-
+        anti_aliasing["sample_ratio"] = 10 if self.down_sampling == self.G10 \
+            else 2
         return {"bandpass": frequencies, "anti_aliasing": anti_aliasing}
 
