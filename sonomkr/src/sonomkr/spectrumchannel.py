@@ -30,7 +30,7 @@ class SpectrumChannel:
 
         self.iir_filters = [list() for i in range(max_subsampling + 1)]
         for idfreq, freq in bp.items():
-            ref_filter_config = bp[freq["subsampling_filter_index"]]["filters"]
+            ref_filter_config = freq["subsampling_filter"]
             iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
                                       numpy.array(ref_filter_config["b1"]),
                                       numpy.array(ref_filter_config["b2"]),

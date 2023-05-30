@@ -52,6 +52,26 @@ class FilterDesign:
         self.filter_order = 6
         self.order_aliasing = 20
 
+    def get_filter(self, x):
+        nyquist = self.sample_rate / 2.0
+        frequency_mid = (self.down_sampling **
+                         (x / self.band_division)) * 1000
+        frequency_max = (self.down_sampling **
+                         (1 / (2 * self.band_division))) * frequency_mid
+        frequency_min = (self.down_sampling **
+                         (- 1 / (2 * self.band_division))) * frequency_mid
+        w = [frequency_min / nyquist,
+             frequency_max / nyquist]
+        w[0] = min(0.99999, max(0.00001, w[0]))
+        w[1] = min(0.99999, max(0.00001, w[1]))
+        sos_bank = signal.butter(self.filter_order, w, 'bandpass',
+                                 False, output='sos')
+        return {"b0": [sos[0] for sos in sos_bank],
+                         "b1": [sos[1] for sos in sos_bank],
+                         "b2": [sos[2] for sos in sos_bank],
+                         "a1": [sos[4] for sos in sos_bank],
+                         "a2": [sos[5] for sos in sos_bank]}
+
     def generate_configuration(self):
         """
         :return: Python dictionary to use in audio processing code
@@ -81,26 +101,13 @@ class FilterDesign:
                 "center_frequency": frequency_mid,
                 "max_frequency": frequency_max,
                 "min_frequency": frequency_min,
+                "filters": self.get_filter(x),
                 "subsampling_depth": subsampling_depth,
-                "subsampling_filter_index":
-                    str(x + subsampling_depth * (10 if self.down_sampling == self.G10 else 3))
+                "subsampling_filter":
+                    self.get_filter(x + subsampling_depth *
+                                    (10 if self.down_sampling == self.G10
+                                     else 3))
             }
-
-        # Compute bandpass filters
-        nyquist = self.sample_rate / 2.0
-        for x in frequencies.keys():
-            w = [frequencies[x]["min_frequency"] / nyquist,
-                 frequencies[x]["max_frequency"] / nyquist]
-            w[0] = min(0.99999, max(0.00001, w[0]))
-            w[1] = min(0.99999, max(0.00001, w[1]))
-            sos_bank = signal.butter(self.filter_order, w, 'bandpass',
-                                     False, output='sos')
-            frequencies[str(x)]["filters"] = \
-                        {"b0": [sos[0] for sos in sos_bank],
-                         "b1": [sos[1] for sos in sos_bank],
-                         "b2": [sos[2] for sos in sos_bank],
-                         "a1": [sos[4] for sos in sos_bank],
-                         "a2": [sos[5] for sos in sos_bank]}
         # Compute antialiasing filter
         frequency_aliasing = self.sample_rate / 10 \
             if self.down_sampling == self.G10 else self.sample_rate / 2

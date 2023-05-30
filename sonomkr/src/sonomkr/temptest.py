@@ -51,13 +51,14 @@ def process_scipy(config):
 
 def test_sinus():
     f = FilterDesign()
-    f.sample_rate = 48000
+    f.sample_rate = 16000
     f.first_band = -13
-    f.last_band = 13
+    f.last_band = 8
     f.down_sampling = f.G2
     configuration = f.generate_configuration()
     import json
     print(json.dumps(configuration, sort_keys=False, indent=4))
+
     # generate signal
     samples = generate_signal(f.sample_rate, duration=60,
                               signal_frequency=1000)
