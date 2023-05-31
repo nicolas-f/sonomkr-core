@@ -71,14 +71,14 @@ class FilterDesign:
         w[1] = min(0.99999, max(0.00001, w[1]))
         sos_bank = signal.butter(self.filter_order, w, 'bandpass',
                                  False, output='sos')
-        return {"b0": [sos[0] for sos in sos_bank],
+        return {"sos": {"b0": [sos[0] for sos in sos_bank],
                          "b1": [sos[1] for sos in sos_bank],
                          "b2": [sos[2] for sos in sos_bank],
                          "a1": [sos[4] for sos in sos_bank],
-                         "a2": [sos[5] for sos in sos_bank],
-                         "center_frequency": frequency_mid,
-                         "max_frequency": frequency_max,
-                         "min_frequency": frequency_min}
+                         "a2": [sos[5] for sos in sos_bank]},
+                "center_frequency": frequency_mid,
+                "max_frequency": frequency_max,
+                "min_frequency": frequency_min}
 
     def get_band_from_frequency(self, frequency):
         frequency_band_index = 0
@@ -103,14 +103,14 @@ class FilterDesign:
         assert self.down_sampling in [self.G10, self.G2]
         assert self.sample_rate > 0
         assert self.sample_rate >= self.last_frequency_band * 2
-        frequencies = {}
+        frequencies = []
         first_band = self.get_band_from_frequency(self.first_frequency_band)
         last_band = self.get_band_from_frequency(self.last_frequency_band)
 
         for x in range(first_band, last_band + 1):
             subsampling_depth = 0
-            frequencies[str(x)] = self.get_filter(x)
-            frequency_mid = frequencies[str(x)]["center_frequency"]
+            data = self.get_filter(x)
+            frequency_mid = data["center_frequency"]
             ds_factor = 10 if self.down_sampling == self.G10\
                 else 2
             while self.sample_rate % \
@@ -118,12 +118,13 @@ class FilterDesign:
                     and self.sample_rate / ds_factor **\
                     (subsampling_depth+1) >= frequency_mid * 2:
                 subsampling_depth += 1
-            frequencies[str(x)]["subsampling_depth"] = subsampling_depth
+            data["subsampling_depth"] = subsampling_depth
             # compute the target frequency index for the used down-sampling
             ss_freq = frequency_mid * ds_factor ** subsampling_depth
             s_index = self.get_band_from_frequency(ss_freq)
-            frequencies[str(x)]["subsampling_filter"] =\
+            data["subsampling_filter"] =\
                 self.get_filter(s_index)
+            frequencies.append(data)
         frequency_aliasing = self.sample_rate / 10 \
             if self.down_sampling == self.G10 else self.sample_rate / 2
         aliasing_sos = signal.butter(self.order_aliasing,

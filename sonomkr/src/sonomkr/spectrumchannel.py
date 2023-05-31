@@ -16,8 +16,8 @@ class SpectrumChannel:
         self.configuration = configuration
         self.use_scipy = use_scipy
         bp = configuration["bandpass"]
-        max_subsampling = max([v["subsampling_depth"] for k, v in
-                               bp.items()])
+        max_subsampling = max([v["subsampling_depth"] for v in
+                               bp])
         self.subsampling_ratio = configuration["anti_aliasing"]["sample_ratio"]
         self.minimum_samples_length = self.subsampling_ratio ** max_subsampling
         ref_filter_config = configuration["anti_aliasing"]
@@ -41,8 +41,8 @@ class SpectrumChannel:
             self.sub_samplers.append(iir_filter)
 
         self.iir_filters = [list() for i in range(max_subsampling + 1)]
-        for idfreq, freq in bp.items():
-            ref_filter_config = freq["subsampling_filter"]
+        for id_frequency, freq in enumerate(bp):
+            ref_filter_config = freq["subsampling_filter"]["sos"]
             if not self.use_scipy:
                 iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
                                           numpy.array(ref_filter_config["b1"]),
@@ -59,7 +59,7 @@ class SpectrumChannel:
                         ref_filter_config["a2"][filter_index]]
                      for filter_index in range(len(ref_filter_config["b0"]))])
             self.iir_filters[freq["subsampling_depth"]]\
-                .append((idfreq, iir_filter))
+                .append((id_frequency, iir_filter))
 
     def process_samples(self, samples):
         """
@@ -72,7 +72,7 @@ class SpectrumChannel:
                              "%d samples" % self.minimum_samples_length)
 
         last_filter_samples = samples
-        leqs = {}
+        leqs = [0 for i in range(len(self.configuration["bandpass"]))]
         for cascade_index, cascade_element in enumerate(self.iir_filters):
             # Use last filter samples into each IIRFilter
             for frequency_id, iir_filter in cascade_element:

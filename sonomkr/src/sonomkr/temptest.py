@@ -37,11 +37,8 @@ def test_sinus():
     for sample_index in range(0, len(samples), stride):
         sub_samples = samples[sample_index:sample_index+stride]
         spectrum_dictionary = sc.process_samples(sub_samples)
-        spectrum = [spectrum_dictionary[str(frequency_name)] for
-                    frequency_name in
-                    sorted(map(int, spectrum_dictionary.keys()))]
         spectrums.append(("%.3f s" % ((sample_index + stride) / f.sample_rate)
-                          , ", ".join(["%.2f" % spl for spl in spectrum])))
+                          , ", ".join(["%.2f" % spl for spl in spectrum_dictionary])))
     for t, spectrum in spectrums:
         print(t, spectrum)
     print("Done in %.3f" % (time.time() - deb))
