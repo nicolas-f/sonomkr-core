@@ -51,23 +51,23 @@ def process_scipy(config):
 
 def test_sinus():
     f = FilterDesign()
-    f.sample_rate = 16000
+    f.sample_rate = 32000
     f.first_band = -13
     f.last_band = 8
-    f.down_sampling = f.G2
+    f.down_sampling = f.G10
     configuration = f.generate_configuration()
     import json
     print(json.dumps(configuration, sort_keys=False, indent=4))
 
     # generate signal
-    samples = generate_signal(f.sample_rate, duration=60,
+    samples = generate_signal(f.sample_rate, duration=120,
                               signal_frequency=1000)
 
-    sc = SpectrumChannel(configuration)
+    sc = SpectrumChannel(configuration, use_scipy=True)
 
     deb = time.time()
     # find appropriate sampling
-    stride = int(1/3 * f.sample_rate)
+    stride = int(f.sample_rate)
     stride = round(stride / sc.minimum_samples_length)\
              * sc.minimum_samples_length
     spectrums = []
@@ -77,11 +77,11 @@ def test_sinus():
         spectrum = [spectrum_dictionary[str(frequency_name)] for
                     frequency_name in
                     sorted(map(int, spectrum_dictionary.keys()))]
-        spectrums.append(("%.3f s" % ((sample_index + stride) / f.sample_rate), spectrum))
+        spectrums.append(("%.3f s" % ((sample_index + stride) / f.sample_rate)
+                          , ", ".join(["%.2f" % spl for spl in spectrum])))
     for t, spectrum in spectrums:
         print(t, spectrum)
-    print("numba Done in %.3f" % (time.time() - deb))
-    print("todo instead of returning filtered result, compute leq directly")
+    print("Done in %.3f" % (time.time() - deb))
 
 
 test_sinus()

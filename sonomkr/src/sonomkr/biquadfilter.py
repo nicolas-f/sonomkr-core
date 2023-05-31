@@ -91,7 +91,7 @@ class BiquadFilter:
 
                 input_acc = output_acc
             square_sum += input_acc * input_acc
-        return 20 * math.log10(square_sum / samples_len)
+        return 20 * math.log10(math.sqrt(square_sum / samples_len))
 
     def filter_slice(self, samples_in: float64[:], samples_out: float64[:],
                      subsampling_factor: int):
