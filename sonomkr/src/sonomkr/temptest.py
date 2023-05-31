@@ -12,9 +12,9 @@ def generate_signal(sample_rate, duration, signal_frequency):
 
 
 def test_sinus():
-    f = FilterDesign(sample_rate=32000, first_frequency_band=50,
+    f = FilterDesign(sample_rate=32000, first_frequency_band=125,
                      last_frequency_band=16000)
-    f.down_sampling = f.G2
+    f.down_sampling = f.G10
     configuration = f.generate_configuration()
     import json
     print(json.dumps(configuration, sort_keys=False, indent=4))
@@ -37,10 +37,13 @@ def test_sinus():
     for sample_index in range(0, len(samples), stride):
         sub_samples = samples[sample_index:sample_index+stride]
         spectrum_dictionary = sc.process_samples(sub_samples)
-        spectrums.append(("%.3f s" % ((sample_index + stride) / f.sample_rate)
-                          , ", ".join(["%.2f" % spl for spl in spectrum_dictionary])))
+        spectrums.append(("%g" % ((sample_index + stride) / f.sample_rate)
+                          , ",".join(["%g" % spl for spl in spectrum_dictionary])))
+    fields = ["%g Hz" % bp["nominal_frequency"]
+              for bp in configuration["bandpass"]]
+    print("t, "+", ".join(fields))
     for t, spectrum in spectrums:
-        print(t, spectrum)
+        print(t+", "+spectrum)
     print("Done in %.3f" % (time.time() - deb))
 
 

@@ -7,6 +7,7 @@ def compute_leq(samples):
     samples = samples.astype(float)
     return 20 * math.log10(math.sqrt((samples * samples).sum() / len(samples)))
 
+
 class SpectrumChannel:
     def __init__(self, configuration, use_scipy=False):
         # init sub_samplers with anti aliasing filters parameters
