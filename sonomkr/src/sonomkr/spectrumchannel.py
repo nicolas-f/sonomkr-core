@@ -104,7 +104,8 @@ class SpectrumChannel:
                     next_filter_samples = signal.sosfilt(
                         self.sub_samplers[cascade_index],
                         last_filter_samples)
-                    next_filter_samples = next_filter_samples[::self.subsampling_ratio]
+                    next_filter_samples = \
+                        next_filter_samples[::self.subsampling_ratio]
 
                 last_filter_samples = next_filter_samples
         return leqs

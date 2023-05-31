@@ -1,14 +1,7 @@
 from filterdesign import FilterDesign
-from biquadfilter import BiquadFilter
 from spectrumchannel import SpectrumChannel
-
-import unittest
 import numpy
-import math
 import time
-import numba
-from multiprocessing import Pool
-from scipy import signal
 
 
 def generate_signal(sample_rate, duration, signal_frequency):
@@ -18,52 +11,22 @@ def generate_signal(sample_rate, duration, signal_frequency):
     return samples
 
 
-def compute_leq(samples):
-    samples = samples.astype(float)
-    return 20 * math.log10(math.sqrt((samples * samples).sum() / len(samples)))
-
-
-def process(config):
-    ref_filter_config, samples = config
-    filtered_samples = samples.astype(numpy.single)
-    iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
-                 numpy.array(ref_filter_config["b1"]),
-                 numpy.array(ref_filter_config["b2"]),
-                 numpy.array(ref_filter_config["a1"]),
-                 numpy.array(ref_filter_config["a2"]))
-    iir_filter.filter(filtered_samples)
-    return compute_leq(filtered_samples)
-
-
-def process_scipy(config):
-    ref_filter_config, samples = config
-    sos = numpy.array([[ref_filter_config["b0"][filter_index],
-                        ref_filter_config["b1"][filter_index],
-                        ref_filter_config["b2"][filter_index],
-                        1.0,
-                        ref_filter_config["a1"][filter_index],
-                        ref_filter_config["a2"][filter_index]]
-                       for filter_index in
-                       range(len(ref_filter_config["b0"]))])
-    filtered = signal.sosfilt(sos, samples)
-    return compute_leq(filtered)
-
-
 def test_sinus():
-    f = FilterDesign()
-    f.sample_rate = 32000
-    f.first_band = -13
-    f.last_band = 8
-    f.down_sampling = f.G10
+    f = FilterDesign(sample_rate=32000, first_frequency_band=50,
+                     last_frequency_band=16000)
+    f.down_sampling = f.G2
     configuration = f.generate_configuration()
     import json
     print(json.dumps(configuration, sort_keys=False, indent=4))
 
     # generate signal
-    samples = generate_signal(f.sample_rate, duration=120,
-                              signal_frequency=1000)
+    samples = generate_signal(f.sample_rate, duration=15,
+                              signal_frequency=1000.0)
 
-    sc = SpectrumChannel(configuration, use_scipy=True)
+    sc = SpectrumChannel(configuration, use_scipy=False)
+
+    # heat up process (numba compilation time)
+    sc.process_samples(samples)
 
     deb = time.time()
     # find appropriate sampling
