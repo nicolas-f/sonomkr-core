@@ -81,7 +81,7 @@ def test_sinus():
     for t, spectrum in spectrums:
         print(t, spectrum)
     print("numba Done in %.3f" % (time.time() - deb))
-
+    print("todo instead of returning filtered result, compute leq directly")
 
 
 test_sinus()

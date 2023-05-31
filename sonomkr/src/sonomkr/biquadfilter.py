@@ -1,7 +1,7 @@
 import numpy
 from numba.experimental import jitclass
 from numba import float64     # import the types
-from numba import njit
+import math
 
 """ A digital biquad filter is a second order recursive linear filter,
  containing two poles and two zeros. "Biquad" is an abbreviation of "bi-quadratic",
@@ -73,9 +73,10 @@ class BiquadFilter:
         self._delay_1 = numpy.zeros(shape=len(self.b0), dtype=float)
         self._delay_2 = numpy.zeros(shape=len(self.b0), dtype=float)
 
-    def filter(self, samples: float64[:]):
+    def filter_then_leq(self, samples: float64[:]):
         samples_len = len(samples)
         filter_length = len(self.b0)
+        square_sum = 0.0
         for i in range(samples_len):
             input_acc = samples[i]
             for j in range(filter_length):
@@ -89,7 +90,8 @@ class BiquadFilter:
                 self._delay_1[j] = input_acc
 
                 input_acc = output_acc
-            samples[i] = input_acc
+            square_sum += input_acc * input_acc
+        return 20 * math.log10(square_sum / samples_len)
 
     def filter_slice(self, samples_in: float64[:], samples_out: float64[:],
                      subsampling_factor: int):

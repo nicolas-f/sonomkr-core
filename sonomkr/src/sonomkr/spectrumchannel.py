@@ -1,11 +1,6 @@
 from biquadfilter import BiquadFilter
 import numpy
-import math
 
-
-def compute_leq(samples):
-    samples = samples.astype(float)
-    return 20 * math.log10(math.sqrt((samples * samples).sum() / len(samples)))
 
 class SpectrumChannel:
     def __init__(self, configuration):
@@ -54,9 +49,8 @@ class SpectrumChannel:
         for cascade_index, cascade_element in enumerate(self.iir_filters):
             # Use last filter samples into each IIRFilter
             for frequency_id, iir_filter in cascade_element:
-                out_samples = last_filter_samples.copy()
-                iir_filter.filter(out_samples)
-                leqs[frequency_id] = compute_leq(out_samples)
+                leqs[frequency_id] = iir_filter.filter_then_leq(
+                    last_filter_samples)
             # sub sampling for next filters (lower frequency)
             if cascade_index < len(self.sub_samplers):
                 next_filter_samples = numpy.zeros(
