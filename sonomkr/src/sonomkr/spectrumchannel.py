@@ -1,6 +1,44 @@
-from biquadfilter import BiquadFilter
+from .biquadfilter import BiquadFilter
 import numpy
 import math
+
+""" SpectrumChannel execute the processing of audio samples according to
+a configuration file using Cascaded filters
+
+BSD 3-Clause License
+
+Copyright (c) 2023, University Gustave Eiffel
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+ Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+ Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+ Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+__authors__ = ["Valentin Le Bescond, Université Gustave Eiffel",
+               "Nicolas Fortin, Université Gustave Eiffel"]
+__license__ = "BSD3"
 
 
 def compute_leq(samples):
@@ -9,7 +47,7 @@ def compute_leq(samples):
 
 
 class SpectrumChannel:
-    def __init__(self, configuration, use_scipy=False):
+    def __init__(self, configuration, use_scipy=False, use_cascade=True):
         # init sub_samplers with anti aliasing filters parameters
         # Sub samplers goal is only to reduce the sample rate for band pass
         # filter that accept lower frequency rates in order to reduce the
@@ -19,6 +57,8 @@ class SpectrumChannel:
         bp = configuration["bandpass"]
         max_subsampling = max([v["subsampling_depth"] for v in
                                bp])
+        if not use_cascade:
+            max_subsampling = 0
         self.subsampling_ratio = configuration["anti_aliasing"]["sample_ratio"]
         self.minimum_samples_length = self.subsampling_ratio ** max_subsampling
         ref_filter_config = configuration["anti_aliasing"]
@@ -43,7 +83,10 @@ class SpectrumChannel:
 
         self.iir_filters = [list() for i in range(max_subsampling + 1)]
         for id_frequency, freq in enumerate(bp):
-            ref_filter_config = freq["subsampling_filter"]["sos"]
+            if use_cascade:
+                ref_filter_config = freq["subsampling_filter"]["sos"]
+            else:
+                ref_filter_config = freq["sos"]
             if not self.use_scipy:
                 iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
                                           numpy.array(ref_filter_config["b1"]),
@@ -59,8 +102,11 @@ class SpectrumChannel:
                         ref_filter_config["a1"][filter_index],
                         ref_filter_config["a2"][filter_index]]
                      for filter_index in range(len(ref_filter_config["b0"]))])
-            self.iir_filters[freq["subsampling_depth"]]\
-                .append((id_frequency, iir_filter))
+            if use_cascade:
+                self.iir_filters[freq["subsampling_depth"]]\
+                    .append((id_frequency, iir_filter))
+            else:
+                self.iir_filters[0].append((id_frequency, iir_filter))
 
     def process_samples(self, samples):
         """

@@ -12,18 +12,19 @@ def generate_signal(sample_rate, duration, signal_frequency):
 
 
 def test_sinus():
-    f = FilterDesign(sample_rate=32000, first_frequency_band=125,
+    f = FilterDesign(sample_rate=48000, first_frequency_band=50,
                      last_frequency_band=16000)
-    f.down_sampling = f.G10
+    f.down_sampling = f.G2
+    f.band_division = 3
     configuration = f.generate_configuration()
     import json
     print(json.dumps(configuration, sort_keys=False, indent=4))
 
     # generate signal
-    samples = generate_signal(f.sample_rate, duration=15,
+    samples = generate_signal(f.sample_rate, duration=10,
                               signal_frequency=1000.0)
 
-    sc = SpectrumChannel(configuration, use_scipy=False)
+    sc = SpectrumChannel(configuration, use_scipy=False, use_cascade=True)
 
     # heat up process (numba compilation time)
     sc.process_samples(samples)

@@ -1,6 +1,4 @@
 import scipy.signal as signal
-import json
-
 """
 Create Filters parameters according to provided audio signal characteristics
  and wanted noise indicators.
@@ -54,7 +52,7 @@ class FilterDesign:
         Create multiple filter configuration for a cascaded band pass filtering
     """
     def __init__(self, sample_rate=48000, first_frequency_band=50,
-                 last_frequency_band=20000):
+                 last_frequency_band=20000, filter_order=6):
         """
         :param sample_rate: Sample rate must be greater than 0
         :param first_frequency_band: First pass band (no limitation)
@@ -68,7 +66,7 @@ class FilterDesign:
         self.G2 = 2.0
         self.down_sampling = self.G10
         self.band_division = 3
-        self.filter_order = 6
+        self.filter_order = filter_order
         self.order_aliasing = 20
 
     def get_bands(self, x):
